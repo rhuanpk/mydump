@@ -19,13 +19,15 @@
 
 # PENDENCIAS:
 # - fazer com que mesmo um arquivo já exista, criar outro personalizado; ()
-# - fazer com que seja possível excluir arquivos de configuração; (-)
+# - fazer com que seja possível excluir arquivos de configuração; ()
 # - poder editar informações de um arquivo já existente; ()
 # - poder excolher vizualmente qual arquivo quer usar; ()
 # - fazer uma barra de progresso; ()
 # - suprimir erros esperados; ()
 # - cirar os arquivos de log e parâmetros (referentes); ()
 # - testar conexão ssh via ip, caso não retorne positivo, tente via dominio, caso falhe, exite, mostrando para o usuário ()
+# - dropar o banco casa já exista
+# - jogar o time para a saida de erro mesmo e depois pegar o time do processo e dar um cat nele
 
 # ------------------------------------------------------------------------------------------------------------------
 # declaração de funções (coleta)
@@ -146,9 +148,12 @@ menu_coleta_info() {
 
 load_file() {
 	tmp_file_path=${1}
+	cont=1
 	for index in ${ordenacao}; do
 		config["${index}"]=$(sed -n ${cont}p ${tmp_file_path})
+		let ++cont
 	done
+	tmp_name_db=${config['database_local']}
 }
 
 # ------------------------------------------------------------------------------------------------------------------
@@ -197,11 +202,11 @@ if [ -z "${config_files_all}" ]; then
 else
 	while [ ${flag} -eq 0 ]; do
 		echo -e "--> Arquivos de configuração já existentes <--"
+		echo "--------------------------------------------------"
 		for tmp_index in $(tr '\n' ' ' <<< ${config_files_all}); do
 			cont=1
 			for index in ${ordenacao}; do
 				if [ "${index}" = "database" ]; then
-					echo "--------------------------------------------------"
 					echo "*** cod [${cont}]: ${config['database']}.conf ***"
 					echo -e "${config_name[${index}]}: $(sed -n ${cont}p ${tmp_index})"
 				else
@@ -241,13 +246,14 @@ get_tmp_files() {
 # declaração de variáveis - principal
 # -------------------------------------------------------------------------------------------------------------------
 
+file_log="${mydump_path}/.error_log_file.log"
 index=0
 
 # ------------------------------------------------------------------------------------------------------------------
 # inicio do programa - principal
 # -------------------------------------------------------------------------------------------------------------------
 
-# exit 7
+echo "==================================================" >> ${file_log}
 
 # ------------------------------------------------------------------------------------------------------------------
 # setando titmeout do ssh
@@ -261,10 +267,10 @@ fi
 # ------------------------------------------------------------------------------------------------------------------
 # exportando somente as tabelas que teram dados
 # -------------------------------------------------------------------------------------------------------------------
-
 tmp_file=$(mktemp /tmp/XXXXX.sql)
 get_tmp_files ${tmp_file}
 
+echo '>>> Exportando estrutura do banco !'
 echo "mysqldump --no-data -h 127.0.0.1 -u ${config['user_db']} -p${config['passwd_db']} ${config['database']} > ${tmp_file}" > ${tmp_file}
 if ! error_msg=$(sshpass -p ${config['passwd_server']} scp -o StrictHostKeyChecking=no ${tmp_file} ${config['user_server']}@${config['host']}:${tmp_file} 2>&1); then
 	cat <<- EOF
@@ -275,8 +281,7 @@ if ! error_msg=$(sshpass -p ${config['passwd_server']} scp -o StrictHostKeyCheck
 	rm ${tmp_file}
 	exit 7
 fi
-time sshpass -p ${config['passwd_server']} ssh ${config['user_server']}@${config['host']} "chmod +x ${tmp_file}; ${tmp_file}"
-
+sshpass -p ${config['passwd_server']} ssh ${config['user_server']}@${config['host']} "chmod +x ${tmp_file}; ${tmp_file}" 2>>${file_log}
 sshpass -p ${config['passwd_server']} scp ${config['user_server']}@${config['host']}:${tmp_file} ${tmp_file}
 
 no_tables=$(egrep -i 'create table' ${tmp_file} | egrep -i '(tbstoragelist)|(tbfilaitem)|(log)|.*(50001){1}.*v.*' | sed 's/\/\*!50001 //g' | cut -d ' ' -f '3' | sed 's/`//g' | tr '\n' ' ')
@@ -284,11 +289,10 @@ for table in ${no_tables}; do
 	ignore_tables=$(echo "${ignore_tables} --ignore-table=${config['database']}.${table}")
 done
 
-
+echo '>>> Exportando somente as tabelas que conteram dados !'
 echo "mysqldump ${ignore_tables# } -h 127.0.0.1 -u ${config['user_db']} -p${config['passwd_db']} ${config['database']} > ${tmp_file}" > ${tmp_file}
 sshpass -p ${config['passwd_server']} scp ${tmp_file} ${config['user_server']}@${config['host']}:${tmp_file}
-time sshpass -p ${config['passwd_server']} ssh ${config['user_server']}@${config['host']} "chmod +x ${tmp_file}; ${tmp_file}"
-
+sshpass -p ${config['passwd_server']} ssh ${config['user_server']}@${config['host']} "chmod +x ${tmp_file}; ${tmp_file}" 2>>${file_log}
 sshpass -p ${config['passwd_server']} scp ${config['user_server']}@${config['host']}:${tmp_file} ${tmp_file}
 
 # ------------------------------------------------------------------------------------------------------------------
@@ -299,10 +303,10 @@ ignore_tables=""
 tmp_file_other=$(mktemp /tmp/XXXXX.sql)
 get_tmp_files ${tmp_file_other}
 
+echo '>>> Exportando estrutura do banco !'
 echo "mysqldump --no-data -h 127.0.0.1 -u ${config['user_db']} -p${config['passwd_db']} ${config['database']} > ${tmp_file_other}" > ${tmp_file_other}
 sshpass -p ${config['passwd_server']} scp ${tmp_file_other} ${config['user_server']}@${config['host']}:${tmp_file_other}
-time sshpass -p ${config['passwd_server']} ssh ${config['user_server']}@${config['host']} "chmod +x ${tmp_file_other}; ${tmp_file_other}"
-
+sshpass -p ${config['passwd_server']} ssh ${config['user_server']}@${config['host']} "chmod +x ${tmp_file_other}; ${tmp_file_other}" 2>>${file_log}
 sshpass -p ${config['passwd_server']} scp ${config['user_server']}@${config['host']}:${tmp_file_other} ${tmp_file_other}
 
 yes_tables=$(egrep -i 'create table' ${tmp_file_other} | egrep -iv '(tbstoragelist)|(tbfilaitem)|(log)' | sed 's/\/\*!50001 //g' | cut -d ' ' -f '3' | sed 's/`//g' | tr '\n' ' ')
@@ -310,10 +314,10 @@ for table in ${yes_tables}; do
 	ignore_tables=$(echo "${ignore_tables} --ignore-table=${config['database']}.${table}")
 done
 
+echo '>>> Exportando somente a estrutura das tabelas que não conteram dados !'
 echo "mysqldump --no-data ${ignore_tables# } -h 127.0.0.1 -u ${config['user_db']} -p${config['passwd_db']} ${config['database']} > ${tmp_file_other}" > ${tmp_file_other}
 sshpass -p ${config['passwd_server']} scp ${tmp_file_other} ${config['user_server']}@${config['host']}:${tmp_file_other}
-time sshpass -p ${config['passwd_server']} ssh ${config['user_server']}@${config['host']} "chmod +x ${tmp_file_other}; ${tmp_file_other}"
-
+sshpass -p ${config['passwd_server']} ssh ${config['user_server']}@${config['host']} "chmod +x ${tmp_file_other}; ${tmp_file_other}" 2>>${file_log}
 sshpass -p ${config['passwd_server']} scp ${config['user_server']}@${config['host']}:${tmp_file_other} ${tmp_file_other}
 
 echo "" >> ${tmp_file}
@@ -323,8 +327,9 @@ cat ${tmp_file_other} >> ${tmp_file}
 # importando banco remoto para local
 # ------------------------------------------------------------------------------------------------------------------
 
-mysql -h 127.0.0.1 -u mkommerce -p12345678 --execute="CREATE DATABASE ${tmp_name_db}"
-time mysql -h 127.0.0.1 -u mkommerce -p12345678 ${tmp_name_db} < ${tmp_file}
+mysql -h 127.0.0.1 -u mkommerce -p12345678 --execute="CREATE DATABASE ${tmp_name_db}" 2>>${file_log}
+echo '>>> Importando para o banco local !'
+mysql -h 127.0.0.1 -u mkommerce -p12345678 ${tmp_name_db} < ${tmp_file} 2>>${file_log}
 
 # ------------------------------------------------------------------------------------------------------------------
 # views, triggers, procedures
@@ -337,12 +342,14 @@ get_tmp_files ${tmp_file_view}
 get_tmp_files ${tmp_file_trigger}
 get_tmp_files ${tmp_file_procedure}
 
-wget -O - "https://${config['domain']}/ferramentas/join-create-views" > ${tmp_file_view}
-wget -O - "https://${config['domain']}/ferramentas/join-create-procedures" > ${tmp_file_procedure}
-wget -O - "https://${config['domain']}/ferramentas/join-create-triggers" > ${tmp_file_trigger}
+wget -qO - "https://${config['domain']}/ferramentas/join-create-views" > ${tmp_file_view}
+wget -qO - "https://${config['domain']}/ferramentas/join-create-procedures" > ${tmp_file_procedure}
+wget -qO - "https://${config['domain']}/ferramentas/join-create-triggers" > ${tmp_file_trigger}
 
 for sql in /tmp/{view,trigger,procedure}*.sql; do
-	mysql -h 127.0.0.1 -u mkommerce -p12345678 ${tmp_name_db} < ${sql}
+	tmp_file_sql=$(basename ${sql%\-*})
+	echo ">>> ${tmp_file_sql^} !"
+	mysql -h 127.0.0.1 -u mkommerce -p12345678 ${tmp_name_db} < ${sql} 2>>${file_log}
 done
 
 for file in ${tmp_arr[@]}; do
