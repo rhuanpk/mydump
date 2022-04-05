@@ -81,6 +81,76 @@ coleta_info() {
 	info${1}
 }
 
+other_file_config() {
+	cont=$(find ${mydump_path} -name "*${config['database']}*" | wc -l)
+	if [ ${cont} -gt 1 ]; then
+		path_completo="${mydump_path}/${config['database']}__${cont}.conf"
+		touch ${path_completo}
+		menu_coleta_info
+	else
+		old_file="${mydump_path}/${config['database']}__0.conf"
+		mv ${path_completo} ${old_file}
+		# echo '0' >> ${old_file}
+		path_completo="${mydump_path}/${config['database']}__1.conf"
+		touch ${path_completo}
+		menu_coleta_info
+	fi
+}
+
+menu_coleta_info() {
+	while [ ${flag} -eq 0 ]; do
+		coleta_info 0
+		echo -ne "\n--> As informações estão corretas !? [Y/n] "; read answer
+		if [ "${answer,,}" != "n" ]; then
+			flag=1
+		else
+			while [ ${flag} -eq 0 ]; do
+				cat <<- EOF
+					Escolha o dado a ser alterado...
+					1. ${config_name['user_db']}						
+					2. ${config_name['passwd_db']}
+					3. ${config_name['domain']}
+					4. ${config_name['host']}
+					5. ${config_name['user_server']}
+					6. ${config_name['passwd_server']}
+					7. ${config_name['database_local']}
+					8. ${config_name['passwd_sudo']}
+					0. TODAS AS INFORMAÇÕES
+				EOF
+				read -p "Escolha: " answer
+				case ${answer} in
+					[0-8]) coleta_info ${answer} ;;
+					*) read -p "Opção inválida! <press enter> " readkey ;;
+				esac
+				cat <<- EOF
+					1. Editar novamente
+					0. Salvar e sair
+				EOF
+				read -p "Escolha: " answer
+				[ ${answer} -eq 0 ] && flag=1
+			done
+		fi
+	done
+	for index in ${ordenacao}; do
+		if [ "${index}" = "database" ]; then
+			echo "${config["${index}"]}" | tr ' ' '\n' > ${path_completo}
+		else
+			echo "${config["${index}"]}" | tr ' ' '\n' >> ${path_completo}				
+		fi
+	done
+	read -p "Realizar a exportação? [Y/n] " answer
+	if [ "${answer,,}" = "n" ]; then
+		exit 0
+	fi
+}
+
+load_file() {
+	tmp_file_path=${1}
+	for index in ${ordenacao}; do
+		config["${index}"]=$(sed -n ${cont}p ${tmp_file_path})
+	done
+}
+
 # ------------------------------------------------------------------------------------------------------------------
 # declaração de variáveis (coleta)
 # -------------------------------------------------------------------------------------------------------------------
@@ -112,8 +182,9 @@ ordenacao="database database_local user_db passwd_db domain host user_server pas
 read -p "Entre com o nome do banco a ser exportado: " config['database']
 config_file="${config['database']}.conf"
 path_completo="${mydump_path}/${config_file}"
+config_files_all="$(find ${mydump_path} -name "*${config['database']}*")"
 
-if [ ! -e "${path_completo}" ]; then
+if [ -z "${config_files_all}" ]; then
 	read -p "Não encontrado nenhum arquivo de configuração... Deseja cria-lo? [Y/n] " answer
 	if [ "${answer,,}" = "n" ]; then
 		echo "Não configurado um novo banco! (exited 7)"
@@ -121,71 +192,44 @@ if [ ! -e "${path_completo}" ]; then
 	else
 		echo "Iniciando criação do arquivo de configuação..."
 		touch ${path_completo}
-		while [ ${flag} -eq 0 ]; do
-			coleta_info 0
-			echo -ne "\n--> As informações estão corretas !? [Y/n] "; read answer
-			if [ "${answer,,}" != "n" ]; then
-				flag=1
-			else
-				while [ ${flag} -eq 0 ]; do
-					cat <<- EOF
-						Escolha o dado a ser alterado...
-						1. ${config_name['user_db']}						
-						2. ${config_name['passwd_db']}
-						3. ${config_name['domain']}
-						4. ${config_name['host']}
-						5. ${config_name['user_server']}
-						6. ${config_name['passwd_server']}
-						7. ${config_name['database_local']}
-						8. ${config_name['passwd_sudo']}
-						0. TODAS AS INFORMAÇÕES
-					EOF
-					read -p "Escolha: " answer
-					case ${answer} in
-						[0-8]) coleta_info ${answer} ;;
-						*) read -p "Opção inválida! <press enter> " readkey ;;
-					esac
-					cat <<- EOF
-						1. Editar novamente
-						0. Salvar e sair
-					EOF
-					read -p "Escolha: " answer
-					[ ${answer} -eq 0 ] && flag=1
-				done
-			fi
-		done
-		for index in ${ordenacao}; do
-			if [ "${index}" = "database" ]; then
-				echo "${config["${index}"]}" | tr ' ' '\n' > ${path_completo}
-			else
-				echo "${config["${index}"]}" | tr ' ' '\n' >> ${path_completo}				
-			fi
-		done
-		read -p "Realizar a exportação? [Y/n] " answer
-		if [ "${answer,,}" = "n" ]; then
-			exit 0
-		fi
+		menu_coleta_info
 	fi
 else
-	echo -e "Arquivos de configuração já existentes...\n--> ${config_file} <--"
-	cont=1
-	for index in ${ordenacao}; do
-		echo -e "${config_name[${index}]}: $(sed -n ${cont}p ${path_completo})"
-		config["${index}"]=$(sed -n ${cont}p ${path_completo})
-		let ++cont
+	while [ ${flag} -eq 0 ]; do
+		echo -e "--> Arquivos de configuração já existentes <--"
+		for tmp_index in $(tr '\n' ' ' <<< ${config_files_all}); do
+			cont=1
+			for index in ${ordenacao}; do
+				if [ "${index}" = "database" ]; then
+					echo "--------------------------------------------------"
+					echo "*** cod [${cont}]: ${config['database']}.conf ***"
+					echo -e "${config_name[${index}]}: $(sed -n ${cont}p ${tmp_index})"
+				else
+					echo -e "${config_name[${index}]}: $(sed -n ${cont}p ${tmp_index})"
+				fi
+				let ++cont
+			done
+			echo "--------------------------------------------------"
+		done
+		cat <<- EOF
+			1. Realizar a exportação?
+			2. Criar outro arquivo de configuração com banco local diferente?
+			3. Excluir o arquivo?
+			0. Sair
+		EOF
+		read -p 'Escolha: ' answer
+		case ${answer} in
+			1) echo "Realizando exportação..."; read -p "Escolha o código do arquivo: " numero; load_file $(sed -n "${numero}p" <<< ${config_files_all}); flag=1 ;;
+			2) other_file_config ;;
+			3) echo "Realizando exclusao..."; read -p "Escolha o código do arquivo: " numero; rm $(sed -n "${numero}p" <<< ${config_files_all}); exit 0 ;;
+			0) exit 0 ;;
+			*) read -p "Opção inválida! <press enter> " readkey ;;
+		esac
 	done
-	read -p "Deseja excluir o arquivo? [Y/n] " answer
-	if [ "${answer,,}" != "n" ]; then
-		rm ${path_completo}
-	fi
-	read -p "Realizar a exportação? [Y/n] " answer
-	if [ "${answer,,}" = "n" ]; then
-		exit 0
-	fi
 fi
 
 # ------------------------------------------------------------------------------------------------------------------
-# declaração de funções
+# declaração de funções - principal
 # -------------------------------------------------------------------------------------------------------------------
 
 get_tmp_files() {
@@ -194,7 +238,7 @@ get_tmp_files() {
 }
 
 # ------------------------------------------------------------------------------------------------------------------
-# declaração de variáveis
+# declaração de variáveis - principal
 # -------------------------------------------------------------------------------------------------------------------
 
 index=0
@@ -203,7 +247,7 @@ index=0
 # inicio do programa - principal
 # -------------------------------------------------------------------------------------------------------------------
 
-exit 1
+# exit 7
 
 # ------------------------------------------------------------------------------------------------------------------
 # setando titmeout do ssh
