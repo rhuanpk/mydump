@@ -368,4 +368,4 @@ for file in ${tmp_arr[@]}; do
 	rm ${file}
 done
 
-echo '>>> Pronto !'
+echo '>>> PRONTO !'
