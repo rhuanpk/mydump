@@ -18,16 +18,17 @@
 ############################################################################
 
 # PENDENCIAS:
-# - fazer com que mesmo um arquivo já exista, criar outro personalizado; ()
-# - fazer com que seja possível excluir arquivos de configuração; ()
+# - fazer com que mesmo um arquivo já exista, criar outro personalizado; (V)
+# - fazer com que seja possível excluir arquivos de configuração; (V)
 # - poder editar informações de um arquivo já existente; ()
 # - poder excolher vizualmente qual arquivo quer usar; ()
 # - fazer uma barra de progresso; ()
-# - suprimir erros esperados; ()
-# - cirar os arquivos de log e parâmetros (referentes); ()
-# - testar conexão ssh via ip, caso não retorne positivo, tente via dominio, caso falhe, exite, mostrando para o usuário ()
-# - dropar o banco casa já exista
-# - jogar o time para a saida de erro mesmo e depois pegar o time do processo e dar um cat nele
+# - suprimir erros esperados; (V)
+# - cirar os arquivos de log e parâmetros (referentes); (/)
+# - testar conexão ssh via ip, caso não retorne positivo, tente via dominio, caso falhe, exite, mostrando para o usuário; ()
+# - dropar o banco casa já exista; (V)
+# - jogar o time para a saida de erro mesmo e depois pegar o time do processo e dar um cat nele; ()
+# - validar se tem algum arquivo de configuração já existente ()
 
 # ------------------------------------------------------------------------------------------------------------------
 # declaração de funções (coleta)
@@ -91,8 +92,8 @@ other_file_config() {
 		menu_coleta_info
 	else
 		old_file="${mydump_path}/${config['database']}__0.conf"
+		# cotinuar testando supressão de erro aqui
 		mv ${path_completo} ${old_file}
-		# echo '0' >> ${old_file}
 		path_completo="${mydump_path}/${config['database']}__1.conf"
 		touch ${path_completo}
 		menu_coleta_info
@@ -147,6 +148,8 @@ menu_coleta_info() {
 }
 
 load_file() {
+	read -p "Para continuar o banco será DROPADO! [yes/NO] " answer
+	[ "${answer,,}" != "yes" ] && exit 0
 	tmp_file_path=${1}
 	cont=1
 	for index in ${ordenacao}; do
@@ -161,9 +164,7 @@ load_file() {
 # -------------------------------------------------------------------------------------------------------------------
 
 flag=0
-
 declare -A config
-
 declare -A config_name=( \
 	['database']="Nome do banco........." \
 	['user_db']="Usuário do banco......" \
@@ -175,9 +176,8 @@ declare -A config_name=( \
 	['database_local']="Nome do banco local..." \
 	['passwd_sudo']="Senha do computador..." \
 )
-
+file_log="${mydump_path}/.error_log_file.log"
 mydump_path="/home/${USER}/.mydump"; [ ! -e ${mydump_path} ] && mkdir -v ${mydump_path}
-
 ordenacao="database database_local user_db passwd_db domain host user_server passwd_server"
 
 # ------------------------------------------------------------------------------------------------------------------
@@ -187,7 +187,7 @@ ordenacao="database database_local user_db passwd_db domain host user_server pas
 read -p "Entre com o nome do banco a ser exportado: " config['database']
 config_file="${config['database']}.conf"
 path_completo="${mydump_path}/${config_file}"
-config_files_all="$(find ${mydump_path} -name "*${config['database']}*")"
+config_files_all="$(find ${mydump_path} -name "*${config['database']}*" | sort)"
 
 if [ -z "${config_files_all}" ]; then
 	read -p "Não encontrado nenhum arquivo de configuração... Deseja cria-lo? [Y/n] " answer
@@ -201,13 +201,14 @@ if [ -z "${config_files_all}" ]; then
 	fi
 else
 	while [ ${flag} -eq 0 ]; do
+		cod_file=1
 		echo -e "--> Arquivos de configuração já existentes <--"
 		echo "--------------------------------------------------"
 		for tmp_index in $(tr '\n' ' ' <<< ${config_files_all}); do
 			cont=1
 			for index in ${ordenacao}; do
 				if [ "${index}" = "database" ]; then
-					echo "*** cod [${cont}]: ${config['database']}.conf ***"
+					echo "*** cod [${cod_file}]: ${config['database']}.conf ***"
 					echo -e "${config_name[${index}]}: $(sed -n ${cont}p ${tmp_index})"
 				else
 					echo -e "${config_name[${index}]}: $(sed -n ${cont}p ${tmp_index})"
@@ -215,6 +216,7 @@ else
 				let ++cont
 			done
 			echo "--------------------------------------------------"
+			let ++cod_file
 		done
 		cat <<- EOF
 			1. Realizar a exportação?
@@ -228,13 +230,10 @@ else
 			2) other_file_config ;;
 			3) echo "Realizando exclusao..."; read -p "Escolha o código do arquivo: " numero; rm $(sed -n "${numero}p" <<< ${config_files_all}); exit 0 ;;
 			0) exit 0 ;;
-			*) read -p "Opção inválida! <press enter> " readkey ;;
+			*) read -p "Opção inválida! <press enter> " readkey; clear ;;
 		esac
 	done
 fi
-
-echo ">>>>>>>>>>DONE!<<<<<<<<<<"
-exit 7
 
 # ------------------------------------------------------------------------------------------------------------------
 # declaração de funções - principal
@@ -249,7 +248,6 @@ get_tmp_files() {
 # declaração de variáveis - principal
 # -------------------------------------------------------------------------------------------------------------------
 
-file_log="${mydump_path}/.error_log_file.log"
 index=0
 
 # ------------------------------------------------------------------------------------------------------------------
@@ -276,13 +274,22 @@ get_tmp_files ${tmp_file}
 echo '>>> Exportando estrutura do banco !'
 echo "mysqldump --no-data -h 127.0.0.1 -u ${config['user_db']} -p${config['passwd_db']} ${config['database']} > ${tmp_file}" > ${tmp_file}
 if ! error_msg=$(sshpass -p ${config['passwd_server']} scp -o StrictHostKeyChecking=no ${tmp_file} ${config['user_server']}@${config['host']}:${tmp_file} 2>&1); then
+	echo "entrou no if..."
 	cat <<- EOF
-		FATAL ERROR: Não foi possível estabelecer a conexão!"
+		FATAL ERROR (ip): Não foi possível estabelecer a conexão!"
 		STDERR: ${error_msg}
-		Exitando do programa (exited 7)
+		Exitando para outro método... exited with 7!
 	EOF
-	rm ${tmp_file}
-	exit 7
+	if ! error_msg=$(sshpass -p ${config['passwd_server']} scp -o StrictHostKeyChecking=no ${tmp_file} ${config['user_server']}@${config['domain']}:${tmp_file} 2>&1); then
+		echo "entrou no elif..."
+		cat <<- EOF
+			FATAL ERROR (domain): Não foi possível estabelecer a conexão!"
+			STDERR: ${error_msg}
+			Exitando do programa... exited with 7!
+		EOF
+		rm ${tmp_file}
+		exit 7
+	fi
 fi
 sshpass -p ${config['passwd_server']} ssh ${config['user_server']}@${config['host']} "chmod +x ${tmp_file}; ${tmp_file}" 2>>${file_log}
 sshpass -p ${config['passwd_server']} scp ${config['user_server']}@${config['host']}:${tmp_file} ${tmp_file}
@@ -330,6 +337,8 @@ cat ${tmp_file_other} >> ${tmp_file}
 # importando banco remoto para local
 # ------------------------------------------------------------------------------------------------------------------
 
+echo '>>> Dropando e Criando o banco local !'
+mysql -h 127.0.0.1 -u mkommerce -p12345678 --execute="DROP DATABASE ${tmp_name_db}" 2>>${file_log}
 mysql -h 127.0.0.1 -u mkommerce -p12345678 --execute="CREATE DATABASE ${tmp_name_db}" 2>>${file_log}
 echo '>>> Importando para o banco local !'
 mysql -h 127.0.0.1 -u mkommerce -p12345678 ${tmp_name_db} < ${tmp_file} 2>>${file_log}
@@ -350,7 +359,7 @@ wget -qO - "https://${config['domain']}/ferramentas/join-create-procedures" > ${
 wget -qO - "https://${config['domain']}/ferramentas/join-create-triggers" > ${tmp_file_trigger}
 
 for sql in /tmp/{view,trigger,procedure}*.sql; do
-	tmp_file_sql=$(basename ${sql%\-*})
+	tmp_file_sql="$(basename ${sql%\-*})"
 	echo ">>> ${tmp_file_sql^} !"
 	mysql -h 127.0.0.1 -u mkommerce -p12345678 ${tmp_name_db} < ${sql} 2>>${file_log}
 done
@@ -358,3 +367,5 @@ done
 for file in ${tmp_arr[@]}; do
 	rm ${file}
 done
+
+echo '>>> Pronto !'
