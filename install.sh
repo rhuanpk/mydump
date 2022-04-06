@@ -4,6 +4,7 @@
 # urxvt -bg black -fg white +sb -fn 10x20 -bc -uc -lsp 1 -e 'mydump'
 mydump_path='/opt/mydump'
 sudo apt install ssh openssh-server sshpass terminator -y
+[ -e ${mydump_path} ] && sudo rm -rf ${mydump_path}
 sudo git clone 'https://github.com/rhuan-pk/mydump.git' "${mydump_path}"
 sudo ln -s ${mydump_path}/mydump.sh /usr/local/bin/mydump
 sudo ln -s ${mydump_path}/mydump-start.sh /usr/local/bin/mydump-start
