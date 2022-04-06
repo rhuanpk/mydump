@@ -25,7 +25,7 @@
 # - fazer uma barra de progresso; ()
 # - suprimir erros esperados; (V)
 # - cirar os arquivos de log e parâmetros (referentes); (/)
-# - testar conexão ssh via ip, caso não retorne positivo, tente via dominio, caso falhe, exite, mostrando para o usuário; ()
+# - testar conexão ssh via ip, caso não retorne positivo, tente via dominio, caso falhe, exite, mostrando para o usuário; (V)
 # - dropar o banco casa já exista; (V)
 # - jogar o time para a saida de erro mesmo e depois pegar o time do processo e dar um cat nele; ()
 # - validar se tem algum arquivo de configuração já existente ()
@@ -86,15 +86,15 @@ coleta_info() {
 
 other_file_config() {
 	cont=$(find ${mydump_path} -name "*${config['database']}*" | wc -l)
+	prox_cont=$(find ${mydump_path} -name "*${config['database']}*" | sort | tail -n +$(find ${mydump_path} -name "*${config['database']}*" | wc -l) | egrep -o '(__[0-9]){1}' | cut -c '3-')
 	if [ ${cont} -gt 1 ]; then
-		path_completo="${mydump_path}/${config['database']}__${cont}.conf"
+		path_completo="${mydump_path}/${config['database']}__$((${prox_cont}+1)).conf"
 		touch ${path_completo}
 		menu_coleta_info
 	else
 		old_file="${mydump_path}/${config['database']}__0.conf"
-		# cotinuar testando supressão de erro aqui
-		mv ${path_completo} ${old_file}
-		path_completo="${mydump_path}/${config['database']}__1.conf"
+		mv ${path_completo} ${old_file} 2>>${file_log}
+		path_completo="${mydump_path}/${config['database']}__$((${prox_cont}+1)).conf"
 		touch ${path_completo}
 		menu_coleta_info
 	fi
@@ -176,8 +176,8 @@ declare -A config_name=( \
 	['database_local']="Nome do banco local..." \
 	['passwd_sudo']="Senha do computador..." \
 )
-file_log="${mydump_path}/.error_log_file.log"
 mydump_path="/home/${USER}/.mydump"; [ ! -e ${mydump_path} ] && mkdir -v ${mydump_path}
+file_log="${mydump_path}/.error_log_file.log"
 ordenacao="database database_local user_db passwd_db domain host user_server passwd_server"
 
 # ------------------------------------------------------------------------------------------------------------------
