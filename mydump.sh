@@ -1,22 +1,7 @@
 #!/usr/bin/env bash
 
-############################################################################
+####################################################################################################
 #
-# ~~~ DEPRECEATED ~~~
-#
-# 1 - caminho absoluto do arquivo
-#  1.1 - nome do arquivo tem que ser o usuário do banco
-#  1.2 - conteúdo do arquivo tem que ter a senha do banco
-# 2 - nome do banco de dados que será feito a exportação
-# 3 - nome do usario do servior
-# 4 - ip do sevidor que tenha o sgbd
-# 5 - dominio do clinete
-# 6 - senha do servidor
-#
-# exemplo: ~/script/mydump.sh '/tmp/tmp/mkommerce.tmp' '127.0.0.1' 'testando' 'b2byexxc' 'b2b.yexx.com.br' 'xxxxxxxxxx'
-#
-############################################################################
-
 # PENDENCIAS:
 # - fazer com que mesmo um arquivo já exista, criar outro personalizado; (V)
 # - fazer com que seja possível excluir arquivos de configuração; (V)
@@ -24,11 +9,14 @@
 # - poder excolher vizualmente qual arquivo quer usar; ()
 # - fazer uma barra de progresso; ()
 # - suprimir erros esperados; (V)
-# - cirar os arquivos de log e parâmetros (referentes); (/)
+# - cirar os arquivos de log e opção para poder acessalos diretamente pelo programa; (/)
 # - testar conexão ssh via ip, caso não retorne positivo, tente via dominio, caso falhe, exite, mostrando para o usuário; (V)
 # - dropar o banco casa já exista; (V)
 # - jogar o time para a saida de erro mesmo e depois pegar o time do processo e dar um cat nele; ()
 # - validar se tem algum arquivo de configuração já existente ()
+# - criar opção no menu para exportar ou não tabelas de log
+#
+####################################################################################################
 
 # ------------------------------------------------------------------------------------------------------------------
 # declaração de funções (coleta)
