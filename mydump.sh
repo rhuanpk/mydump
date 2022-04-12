@@ -237,6 +237,7 @@ get_tmp_files() {
 # -------------------------------------------------------------------------------------------------------------------
 
 index=0
+connection=${config['host']}
 
 # ------------------------------------------------------------------------------------------------------------------
 # inicio do programa - principal
@@ -261,15 +262,14 @@ get_tmp_files ${tmp_file}
 
 echo '>>> Exportando estrutura do banco !'
 echo "mysqldump --no-data -h 127.0.0.1 -u ${config['user_db']} -p${config['passwd_db']} ${config['database']} > ${tmp_file}" > ${tmp_file}
-if ! error_msg=$(sshpass -p ${config['passwd_server']} scp -o StrictHostKeyChecking=no ${tmp_file} ${config['user_server']}@${config['host']}:${tmp_file} 2>&1); then
-	echo "entrou no if..."
+if ! error_msg=$(sshpass -p ${config['passwd_server']} scp -o StrictHostKeyChecking=no ${tmp_file} ${config['user_server']}@${connection}:${tmp_file} 2>&1); then
 	cat <<- EOF
 		FATAL ERROR (ip): Não foi possível estabelecer a conexão!"
 		STDERR: ${error_msg}
 		Exitando para outro método... exited with 7!
 	EOF
-	if ! error_msg=$(sshpass -p ${config['passwd_server']} scp -o StrictHostKeyChecking=no ${tmp_file} ${config['user_server']}@${config['domain']}:${tmp_file} 2>&1); then
-		echo "entrou no elif..."
+	connection=${config['domain']}
+	if ! error_msg=$(sshpass -p ${config['passwd_server']} scp -o StrictHostKeyChecking=no ${tmp_file} ${config['user_server']}@${connection}:${tmp_file} 2>&1); then
 		cat <<- EOF
 			FATAL ERROR (domain): Não foi possível estabelecer a conexão!"
 			STDERR: ${error_msg}
@@ -279,8 +279,8 @@ if ! error_msg=$(sshpass -p ${config['passwd_server']} scp -o StrictHostKeyCheck
 		exit 7
 	fi
 fi
-sshpass -p ${config['passwd_server']} ssh ${config['user_server']}@${config['host']} "chmod +x ${tmp_file}; ${tmp_file}" 2>>${file_log}
-sshpass -p ${config['passwd_server']} scp ${config['user_server']}@${config['host']}:${tmp_file} ${tmp_file}
+sshpass -p ${config['passwd_server']} ssh ${config['user_server']}@${connection} "chmod +x ${tmp_file}; ${tmp_file}" 2>>${file_log}
+sshpass -p ${config['passwd_server']} scp ${config['user_server']}@${connection}:${tmp_file} ${tmp_file}
 
 no_tables=$(egrep -i 'create table' ${tmp_file} | egrep -i '(tbstoragelist)|(tbfilaitem)|(log)|.*(50001){1}.*v.*' | sed 's/\/\*!50001 //g' | cut -d ' ' -f '3' | sed 's/`//g' | tr '\n' ' ')
 for table in ${no_tables}; do
@@ -289,9 +289,9 @@ done
 
 echo '>>> Exportando somente as tabelas que conteram dados !'
 echo "mysqldump ${ignore_tables# } -h 127.0.0.1 -u ${config['user_db']} -p${config['passwd_db']} ${config['database']} > ${tmp_file}" > ${tmp_file}
-sshpass -p ${config['passwd_server']} scp ${tmp_file} ${config['user_server']}@${config['host']}:${tmp_file}
-sshpass -p ${config['passwd_server']} ssh ${config['user_server']}@${config['host']} "chmod +x ${tmp_file}; ${tmp_file}" 2>>${file_log}
-sshpass -p ${config['passwd_server']} scp ${config['user_server']}@${config['host']}:${tmp_file} ${tmp_file}
+sshpass -p ${config['passwd_server']} scp ${tmp_file} ${config['user_server']}@${connection}:${tmp_file}
+sshpass -p ${config['passwd_server']} ssh ${config['user_server']}@${connection} "chmod +x ${tmp_file}; ${tmp_file}" 2>>${file_log}
+sshpass -p ${config['passwd_server']} scp ${config['user_server']}@${connection}:${tmp_file} ${tmp_file}
 
 # ------------------------------------------------------------------------------------------------------------------
 # exportando somente a estrutura das tabelas que não teram dados
@@ -303,9 +303,9 @@ get_tmp_files ${tmp_file_other}
 
 echo '>>> Exportando estrutura do banco !'
 echo "mysqldump --no-data -h 127.0.0.1 -u ${config['user_db']} -p${config['passwd_db']} ${config['database']} > ${tmp_file_other}" > ${tmp_file_other}
-sshpass -p ${config['passwd_server']} scp ${tmp_file_other} ${config['user_server']}@${config['host']}:${tmp_file_other}
-sshpass -p ${config['passwd_server']} ssh ${config['user_server']}@${config['host']} "chmod +x ${tmp_file_other}; ${tmp_file_other}" 2>>${file_log}
-sshpass -p ${config['passwd_server']} scp ${config['user_server']}@${config['host']}:${tmp_file_other} ${tmp_file_other}
+sshpass -p ${config['passwd_server']} scp ${tmp_file_other} ${config['user_server']}@${connection}:${tmp_file_other}
+sshpass -p ${config['passwd_server']} ssh ${config['user_server']}@${connection} "chmod +x ${tmp_file_other}; ${tmp_file_other}" 2>>${file_log}
+sshpass -p ${config['passwd_server']} scp ${config['user_server']}@${connection}:${tmp_file_other} ${tmp_file_other}
 
 yes_tables=$(egrep -i 'create table' ${tmp_file_other} | egrep -iv '(tbstoragelist)|(tbfilaitem)|(log)' | sed 's/\/\*!50001 //g' | cut -d ' ' -f '3' | sed 's/`//g' | tr '\n' ' ')
 for table in ${yes_tables}; do
@@ -314,9 +314,9 @@ done
 
 echo '>>> Exportando somente a estrutura das tabelas que não conteram dados !'
 echo "mysqldump --no-data ${ignore_tables# } -h 127.0.0.1 -u ${config['user_db']} -p${config['passwd_db']} ${config['database']} > ${tmp_file_other}" > ${tmp_file_other}
-sshpass -p ${config['passwd_server']} scp ${tmp_file_other} ${config['user_server']}@${config['host']}:${tmp_file_other}
-sshpass -p ${config['passwd_server']} ssh ${config['user_server']}@${config['host']} "chmod +x ${tmp_file_other}; ${tmp_file_other}" 2>>${file_log}
-sshpass -p ${config['passwd_server']} scp ${config['user_server']}@${config['host']}:${tmp_file_other} ${tmp_file_other}
+sshpass -p ${config['passwd_server']} scp ${tmp_file_other} ${config['user_server']}@${connection}:${tmp_file_other}
+sshpass -p ${config['passwd_server']} ssh ${config['user_server']}@${connection} "chmod +x ${tmp_file_other}; ${tmp_file_other}" 2>>${file_log}
+sshpass -p ${config['passwd_server']} scp ${config['user_server']}@${connection}:${tmp_file_other} ${tmp_file_other}
 
 echo "" >> ${tmp_file}
 cat ${tmp_file_other} >> ${tmp_file}
