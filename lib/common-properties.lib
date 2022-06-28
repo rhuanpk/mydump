@@ -1,0 +1,16 @@
+set_sleep_flag() {
+	flag=${1}
+	echo "SLEEP_FLAG:${flag}" > ${sleep_flag_file}
+}
+get_tmp_files() {
+	tmp_arr[${index}]="${1}"
+	let ++index_tmp_files
+}
+index_tmp_files=0
+mydump_path="/home/${USER}/.mydump"
+file_log="${mydump_path}/.error_log_file.log"
+sleep_flag_file=$(mktemp /tmp/mydump_XXXXXXXXXX.tmp)
+loading_bar_file=$(mktemp /tmp/mydump_XXXXXXXXXX.tmp)
+coleta_info_file=$(mktemp /tmp/mydump_XXXXXXXXXX.tmp)
+max_stps_flg_file=$(mktemp /tmp/mydump_XXXXXXXXXX.tmp)
+terminal_cols_tmp_file=$(mktemp /tmp/mydump_XXXXXXXXXX.tmp)

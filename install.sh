@@ -1,20 +1,34 @@
 #!/usr/bin/env bash
-# sudo wget "https://xfonts.pro/xfonts_files/5e4ba999a0eae905e9ddddb5/files/JetBrainsMono-Regular.ttf"
-# /usr/share/terminology/fonts - dar o wget aqui dentro
-# urxvt -bg black -fg white +sb -fn 10x20 -bc -uc -lsp 1 -e 'mydump'
+
 mydump_path='/opt/mydump'
+mydump_desktop="/home/${USER}/.local/share/applications/mydump.desktop"
 sudo apt install ssh openssh-server sshpass terminator -y
-[ -e ${mydump_path} ] && sudo rm -rf ${mydump_path}
+[ -e ${mydump_path} ] && {
+        sudo rm -rf ${mydump_path}
+        sudo rm -f /usr/local/bin/mydump
+        sudo rm -f /usr/local/bin/mydump-start
+}
+[ -e /usr/local/lib/mydump -o -e /usr/local/share/mydump ] && {
+        sudo rm -rf /usr/local/lib/mydump
+        sudo rm -rf /usr/local/share/mydump
+        sudo mkdir -p /usr/local/lib/mydump
+        sudo mkdir -p /usr/local/share/mydump/{icons,banner}
+}
 sudo git clone 'https://github.com/rhuan-pk/mydump.git' "${mydump_path}"
-sudo ln -s ${mydump_path}/mydump.sh /usr/local/bin/mydump
-sudo ln -s ${mydump_path}/mydump-start.sh /usr/local/bin/mydump-start
-sudo cat << EOF > /home/${USER}/.local/share/applications/mydump.desktop
+sudo ln -s ${mydump_path}/bin/mydump-coleta.sh /usr/local/bin/mydump
+sudo ln -s ${mydump_path}/bin/mydump-principal.sh /usr/local/bin/mydump-principal
+sudo ln -s ${mydump_path}/bin/mydump-start.sh /usr/local/bin/mydump-start
+sudo ln -s ${mydump_path}/bin/loading-bar.sh /usr/local/bin/loading-bar
+sudo ln -s ${mydump_path}/lib/common-properties.lib /usr/local/lib/mydump/common-properties.lib
+sudo ln -s ${mydump_path}/share/icons/logo.png /usr/local/share/mydump/icons/logo.png
+sudo ln -s ${mydump_path}/share/banner/banner.txt /usr/local/share/mydump/banner/banner.txt
+cat << EOF | tee ${mydump_desktop}
 [Desktop Entry]
-        Encoding=UTF-8
-        Name=MyDump
-        Icon=${mydump_path}/icons/logo.png
-        Exec=mydump-start
-        Terminal=false
-        Type=Application
+Encoding=UTF-8
+Name=MyDump
+Icon=/usr/local/share/mydump/icons/logo.png
+Exec=mydump-start
+Terminal=false
+Type=Application
 EOF
-sudo chmod +x /home/${USER}/.local/share/applications/mydump.desktop
+sudo chmod +x ${mydump_desktop}
