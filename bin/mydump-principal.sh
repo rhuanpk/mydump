@@ -9,11 +9,16 @@ source /usr/local/lib/mydump/common-properties.lib
 
 set_max_steps() {
 	value=${1}
-	echo "MAX_STEPS:${value}" > ${max_stps_flg_file}
+	echo "MAX_STEPS:${value}" > ${fixed_tmp_files['max_stps_flg_file']}
 }
 
 clean_sleep_flag() {
-	> ${sleep_flag_file}
+	> ${fixed_tmp_files['sleep_flag_file']}
+}
+
+get_tmp_files() {
+	tmp_arr[${index_tmp_files}]="${1}"
+	let ++index_tmp_files
 }
 
 # -------------------------------------------------------------------------------------------------------------------
@@ -31,9 +36,11 @@ declare -A config=(\
 	['passwd_server']=""\
 )
 for config_var in ${!config[@]}; do
-	config[${config_var}]=$(grep -Ei "^(${config_var}:)" ${coleta_info_file} | cut -d ':' -f 2)
+	config[${config_var}]=$(grep -Ei "^(${config_var}:)" ${fixed_tmp_files['coleta_info_file']} | cut -d ':' -f 2)
 done
 connection=${config['host']}
+index_tmp_files=0
+tmp_arr[${index_tmp_files}]=""
 
 #####################################################################################################################
 # 
@@ -171,7 +178,7 @@ for sql in /tmp/{view,trigger,procedure}*.sql; do
 	set_sleep_flag true
 done
 
-for file in ${tmp_arr[@]}; do
+for file in ${tmp_arr[@]} ${fixed_tmp_files[@]}; do
 	rm ${file}
 done
 set_sleep_flag true

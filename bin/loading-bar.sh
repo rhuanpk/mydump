@@ -7,18 +7,18 @@ source /usr/local/lib/mydump/common-properties.lib
 
 # Atualiza o valor da flag que mantem a "loading bar" pausada
 refresh_sleep_flag() {
-	SLEEP_FLAG=$(cut -d ':' -f 2 ${sleep_flag_file})
+	SLEEP_FLAG=$(cut -d ':' -f 2 ${fixed_tmp_files['sleep_flag_file']})
 	${SLEEP_FLAG:=false}
 }
 
 # ********** Declaração de Variáveis **********
 
 # Recebe a quantidade de passos que terá no programa
-MAX_STEPS=$(cut -d ':' -f 2 ${max_stps_flg_file})
+MAX_STEPS=$(cut -d ':' -f 2 ${fixed_tmp_files['max_stps_flg_file']})
 # Seta o vlaor inicial da flag que mantem a "loading bar" pausada como false para conseguir entrar no fluxo normal do programa
 SLEEP_FLAG=false
 # Recebe a quantidade de colunas do tamanho da tela atual em que o programa é invocado "-17" porque é o tamanho total da "loading bar"
-terminal_cols=$(cat ${terminal_cols_tmp_file})
+terminal_cols=$(cat ${fixed_tmp_files['terminal_cols_tmp_file']})
 
 # ********** Início do Programa **********	
 
@@ -36,7 +36,7 @@ for index in $(seq 1 ${MAX_STEPS}); do
 	percentual_bar=$(($((${percentual}*${max_loadbar_size}))/100))
 	
 	# Printa a loading-bar em um arquivo
-	echo -e "\n\nProgress: [${loadbar_size:0:${percentual_bar}}] ${percentual}%" >> ${loading_bar_file}
+	echo -e "\n\nProgress: [${loadbar_size:0:${percentual_bar}}] ${percentual}%" >> ${fixed_tmp_files['loading_bar_file']}
 
 	# Loop que segura a "loading bar" até poder ser printada novamente mediante 'refresh' da variável
 	while :; do

@@ -168,6 +168,8 @@ ordenacao="database database_local user_db passwd_db domain host user_server pas
 #
 #####################################################################################################################
 
+touch ${fixed_tmp_files[@]}
+
 [ ! -e ${mydump_path} ] && mkdir -v ${mydump_path}
 read -p "Entre com o nome do banco a ser exportado: " config['database']
 config_file="${config['database']}.conf"
@@ -220,9 +222,8 @@ else
 	done
 fi
 
-get_tmp_files ${coleta_info_file}
 for config_var in ${!config[@]}; do
-	echo ${config_var}:${config[${config_var}]} >> ${coleta_info_file}
+	echo ${config_var}:${config[${config_var}]} >> ${fixed_tmp_files['coleta_info_file']}
 done
 
 tmp_line=$(cat -n '/etc/ssh/ssh_config' | egrep '.*(#)+.*(ConnectTimeout)+.*' | cut -c 5-7 | sed 's/\t$//')
@@ -230,19 +231,18 @@ if [ ! -z ${tmp_line} ]; then
 	echo -e "${passwd_sudo}\n" | sudo -S sed -i "${tmp_line}s/^#/ /" /etc/ssh/ssh_config && echo -e "${passwd_sudo}\n" | sudo -S sed -i "${tmp_line}s/0/15/" /etc/ssh/ssh_config
 fi
 
-get_tmp_files ${terminal_cols_tmp_file}
 # Recebe a quantidade de colunas do tamanho da tela atual em que o programa é invocado "-17" porque é o tamanho total da "loading bar"
-echo $(($(tput cols)-17)) > ${terminal_cols_tmp_file}
+echo $(($(tput cols)-17)) > ${fixed_tmp_files['terminal_cols_tmp_file']}
 
 while :; do
 	sleep 1.5
-	if ! ps -o pid,command -C bash | grep -Ei '(loading-bar.sh)' >&/dev/null; then
+	if ! ps -o pid,command -C bash | grep -Ei '(loading-bar)' >&/dev/null; then
 		sleep 30
 		kill -9 $(ps -o pid -C multitail | tail -1) 2>&-
 		break
 	fi
 done &
 
-get_tmp_files ${loading_bar_file}
-multitail -D -l mydump-principal -wh 3 -i ${loading_bar_file}
+multitail -D -l mydump-principal -wh 3 -i ${fixed_tmp_files['loading_bar_file']}
+
 clear
