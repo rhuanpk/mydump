@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# source /opt/mydump/lib/common-properties.lib
+# biblioteca pessoal compartilhada
 source /usr/local/lib/mydump/common-properties.lib
 
 # ********** Declaração de Funções **********

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+# biblioteca pessoal compartilhada
 source /usr/local/lib/mydump/common-properties.lib
 
 # -------------------------------------------------------------------------------------------------------------------
@@ -167,7 +168,6 @@ for sql in /tmp/{view,trigger,procedure}*.sql; do
 	tmp_file_sql="$(basename ${sql%\-*})"
 	echo ">>> ${tmp_file_sql^} !"
 	mysql -h 127.0.0.1 -u mkommerce -p12345678 ${tmp_name_db} < ${sql} 2>>${file_log}
-	# lb
 	set_sleep_flag true
 done
 
