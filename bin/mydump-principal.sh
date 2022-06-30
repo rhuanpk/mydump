@@ -41,6 +41,7 @@ done
 connection=${config['host']}
 index_tmp_files=0
 tmp_arr[${index_tmp_files}]=""
+tmp_name_db=${config['database_local']}
 
 #####################################################################################################################
 # 
