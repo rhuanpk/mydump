@@ -189,7 +189,7 @@ if [ -z "${config_files_all}" ]; then
 else
 	while [ ${flag} -eq 0 ]; do
 		cod_file=1
-		echo -e "--> Arquivos de configuração já existentes <--"
+		echo "--> Arquivos de configuração já existentes <--"
 		echo "--------------------------------------------------"
 		for tmp_index in $(tr '\n' ' ' <<< ${config_files_all}); do
 			cont=1

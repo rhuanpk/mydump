@@ -65,6 +65,24 @@ loading-bar &
 tmp_file=$(mktemp /tmp/mydump_XXXXXXXXXXXXXXX.sql)
 get_tmp_files ${tmp_file}
 
+# Nesse for certamente não é necessários essas variáveis, posso fazer o for iterar diretamente sobre o array config
+echo -e "\t--> Dados selecionados <--"
+echo "--------------------------------------------------"
+for tmp_index in $(tr '\n' ' ' <<< ${config_files_all}); do
+	cont=1
+	for index in ${ordenacao}; do
+		if [ "${index}" = "database" ]; then
+			echo "*** cod [${cod_file}]: ${config['database']}.conf ***"
+			echo -e "${config_name[${index}]}: $(sed -n ${cont}p ${tmp_index})"
+		else
+			echo -e "${config_name[${index}]}: $(sed -n ${cont}p ${tmp_index})"
+		fi
+		let ++cont
+	done
+	echo "--------------------------------------------------"
+	let ++cod_file
+done
+
 echo '>>> Exportando estrutura do banco !'
 echo "mysqldump --no-data -h 127.0.0.1 -u ${config['user_db']} -p${config['passwd_db']} ${config['database']} > ${tmp_file}" > ${tmp_file}
 set_sleep_flag true
