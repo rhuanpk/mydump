@@ -50,3 +50,5 @@ for index in $(seq 1 ${MAX_STEPS}); do
 	refresh_sleep_flag
 
 done
+
+sleep ${final_sleep_time}

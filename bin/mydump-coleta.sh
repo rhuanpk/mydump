@@ -237,8 +237,10 @@ echo $(($(tput cols)-17)) > ${fixed_tmp_files['terminal_cols_tmp_file']}
 while :; do
 	sleep 1.5
 	if ! ps -o pid,command -C bash | grep -Ei '(loading-bar)' >&/dev/null; then
-		sleep 30
 		kill -9 $(ps -o pid -C multitail | tail -1) 2>&-
+		for file in ${fixed_tmp_files[@]}; do
+			rm ${file}
+		done
 		break
 	fi
 done &

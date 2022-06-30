@@ -54,14 +54,14 @@ cat /usr/local/share/mydump/banner/banner.txt
 # Printar manualmentea a infos escolhidas pelo usuário
 
 # deixar o "set_max_steps" método automático para saber quantos steps tem baseado na quantidade de chamandas do "set_sleep_flag"
-set_max_steps 24
+set_max_steps 25
 clean_sleep_flag
 loading-bar &
 
 # exportando somente as tabelas que teram dados
 # -------------------------------------------------------------------------------------------------------------------
 
-tmp_file=$(mktemp /tmp/mydump_XXXXXXXXXX.sql)
+tmp_file=$(mktemp /tmp/mydump_XXXXXXXXXXXXXXX.sql)
 get_tmp_files ${tmp_file}
 
 echo '>>> Exportando estrutura do banco !'
@@ -81,7 +81,7 @@ if ! error_msg=$(sshpass -p ${config['passwd_server']} scp -o StrictHostKeyCheck
 			Saindo do programa em 15 segundos... (código de erro 7)!
 		EOF
 		rm ${tmp_file}
-		sleep 15
+		sleep ${final_sleep_time}
 		set_sleep_flag true
 		exit 7
 	fi
@@ -112,7 +112,7 @@ set_sleep_flag true
 # -------------------------------------------------------------------------------------------------------------------
 
 ignore_tables=""
-tmp_file_other=$(mktemp /tmp/mydump_XXXXXXXXXX.sql)
+tmp_file_other=$(mktemp /tmp/mydump_XXXXXXXXXXXXXXX.sql)
 get_tmp_files ${tmp_file_other}
 
 echo '>>> Exportando estrutura do banco !'
@@ -160,9 +160,9 @@ set_sleep_flag true
 # views, triggers, procedures
 # -------------------------------------------------------------------------------------------------------------------
 
-tmp_file_view=$(mktemp /tmp/view-XXXXX.sql)
-tmp_file_trigger=$(mktemp /tmp/trigger-XXXXX.sql)
-tmp_file_procedure=$(mktemp /tmp/procedure-XXXXX.sql)
+tmp_file_view=$(mktemp /tmp/mydump_view_XXXXXXXXXXXXXXX.sql)
+tmp_file_trigger=$(mktemp /tmp/mydump_trigger_XXXXXXXXXXXXXXX.sql)
+tmp_file_procedure=$(mktemp /tmp/mydump_procedure_XXXXXXXXXXXXXXX.sql)
 get_tmp_files ${tmp_file_view}
 get_tmp_files ${tmp_file_trigger}
 get_tmp_files ${tmp_file_procedure}
@@ -171,14 +171,14 @@ wget -qO - "https://${config['domain']}/ferramentas/join-create-views" > ${tmp_f
 wget -qO - "https://${config['domain']}/ferramentas/join-create-procedures" > ${tmp_file_procedure}
 wget -qO - "https://${config['domain']}/ferramentas/join-create-triggers" > ${tmp_file_trigger}
 
-for sql in /tmp/{view,trigger,procedure}*.sql; do
-	tmp_file_sql="$(basename ${sql%\-*})"
+for sql in /tmp/mydump_{view,trigger,procedure}_*.sql; do
+	tmp_file_sql="$(basename ${sql%_*} | sed 's/^.*_//')"
 	echo ">>> ${tmp_file_sql^} !"
 	mysql -h 127.0.0.1 -u mkommerce -p12345678 ${tmp_name_db} < ${sql} 2>>${file_log}
 	set_sleep_flag true
 done
 
-for file in ${tmp_arr[@]} ${fixed_tmp_files[@]}; do
+for file in ${tmp_arr[@]}; do
 	rm ${file}
 done
 set_sleep_flag true
@@ -187,6 +187,6 @@ echo '>>> PRONTO !'
 
 echo ' '
 
-echo 'Saindo em 30 segundos...'
+echo "Saindo em ${final_sleep_time} segundos..."
 
-sleep 30
+sleep ${final_sleep_time}
