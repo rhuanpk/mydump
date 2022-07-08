@@ -21,10 +21,29 @@ get_tmp_files() {
 	let ++index_tmp_files
 }
 
+dash_print() {
+	dash_bar=""
+	for index in $(seq $((${#maior_var}+1))); do
+		dash_bar="${dash_bar}-"
+	done
+	echo "${dash_bar}"
+}
+
 # -------------------------------------------------------------------------------------------------------------------
 # declaração de variáveis
 # -------------------------------------------------------------------------------------------------------------------
 
+declare -A config_name=( \
+	['database']="Nome do banco........." \
+	['user_db']="Usuário do banco......" \
+	['passwd_db']="Senha do banco........" \
+	['domain']="Domínio do cliente...." \
+	['host']="IP do servidor........" \
+	['user_server']="Usuário do servidor..." \
+	['passwd_server']="Senha do servidor....." \
+	['database_local']="Nome do banco local..." \
+	['passwd_sudo']="Senha do computador..." \
+)
 declare -A config=(\
 	['database']="" \
 	['database_local']="" \
@@ -42,6 +61,8 @@ connection=${config['host']}
 index_tmp_files=0
 tmp_arr[${index_tmp_files}]=""
 tmp_name_db=${config['database_local']}
+maior_var=""
+title_message='--> Dados selecionados <--'
 
 #####################################################################################################################
 # 
@@ -66,22 +87,32 @@ tmp_file=$(mktemp /tmp/mydump_XXXXXXXXXXXXXXX.sql)
 get_tmp_files ${tmp_file}
 
 # Nesse for certamente não é necessários essas variáveis, posso fazer o for iterar diretamente sobre o array config
-echo -e "\t--> Dados selecionados <--"
-echo "--------------------------------------------------"
-for tmp_index in $(tr '\n' ' ' <<< ${config_files_all}); do
-	cont=1
-	for index in ${ordenacao}; do
-		if [ "${index}" = "database" ]; then
-			echo "*** cod [${cod_file}]: ${config['database']}.conf ***"
-			echo -e "${config_name[${index}]}: $(sed -n ${cont}p ${tmp_index})"
-		else
-			echo -e "${config_name[${index}]}: $(sed -n ${cont}p ${tmp_index})"
-		fi
-		let ++cont
-	done
-	echo "--------------------------------------------------"
-	let ++cod_file
+
+for index in ${ordenacao}; do
+	aux_var=$(echo "${config_name[${index}]} --> ${config[${index}]}")
+	[ ${#maior_var} -lt ${#aux_var} ] && maior_var=${aux_var}
 done
+
+expression=$(echo "$(echo ${#maior_var}/2.0 | genius) - $(echo ${#title_message}*0.5 | genius)" | genius | cut -d '.' -f 1)
+
+for index in $(seq $((${expression}-1))); do
+	title_selected_data="${title_selected_data} "
+done
+
+title_selected_data="${title_selected_data} ${title_message}"
+
+echo  " "
+echo "${title_selected_data}"
+echo  " "
+
+dash_print
+
+for index in ${ordenacao}; do
+	echo "${config_name[${index}]} --> ${config[${index}]}"
+done
+
+dash_print
+echo  " "
 
 echo '>>> Exportando estrutura do banco !'
 echo "mysqldump --no-data -h 127.0.0.1 -u ${config['user_db']} -p${config['passwd_db']} ${config['database']} > ${tmp_file}" > ${tmp_file}

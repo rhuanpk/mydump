@@ -2,10 +2,14 @@ set_sleep_flag() {
 	flag=${1}
 	echo "SLEEP_FLAG:${flag}" > ${fixed_tmp_files['sleep_flag_file']}
 }
+format_config_name() {
+	tr -d '.' <<< ${1}
+}
 
 final_sleep_time=15
 mydump_path="/home/${USER}/.mydump"
 file_log="${mydump_path}/.error_log_file.log"
+ordenacao="database database_local user_db passwd_db domain host user_server passwd_server"
 declare -A fixed_tmp_files=(\
 	['sleep_flag_file']=/tmp/mydump_slpflgfl.tmp \
 	['loading_bar_file']=/tmp/mydump_ldngbrfl.tmp \

@@ -160,7 +160,6 @@ declare -A config_name=( \
 	['database_local']="Nome do banco local..." \
 	['passwd_sudo']="Senha do computador..." \
 )
-ordenacao="database database_local user_db passwd_db domain host user_server passwd_server"
 
 #####################################################################################################################
 # 
@@ -190,7 +189,7 @@ else
 	while [ ${flag} -eq 0 ]; do
 		cod_file=1
 		echo "--> Arquivos de configuração já existentes <--"
-		echo "--------------------------------------------------"
+		echo "---------------------------------------------------------------------------"
 		for tmp_index in $(tr '\n' ' ' <<< ${config_files_all}); do
 			cont=1
 			for index in ${ordenacao}; do
@@ -202,7 +201,7 @@ else
 				fi
 				let ++cont
 			done
-			echo "--------------------------------------------------"
+			echo "---------------------------------------------------------------------------"
 			let ++cod_file
 		done
 		cat <<- EOF
