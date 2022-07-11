@@ -6,6 +6,7 @@ format_config_name() {
 	tr -d '.' <<< ${1}
 }
 
+programs2install='ssh openssh-server sshpass terminator multitail git wget genius'
 final_sleep_time=15
 mydump_path="/home/${USER}/.mydump"
 file_log="${mydump_path}/.error_log_file.log"
