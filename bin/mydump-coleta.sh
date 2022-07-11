@@ -221,6 +221,8 @@ else
 	done
 fi
 
+read -p "Porta SSH (<enter> para não especificar): " config['port']
+
 for config_var in ${!config[@]}; do
 	echo ${config_var}:${config[${config_var}]} >> ${fixed_tmp_files['coleta_info_file']}
 done

@@ -52,7 +52,8 @@ declare -A config=(\
 	['domain']="" \
 	['host']="" \
 	['user_server']="" \
-	['passwd_server']=""\
+	['passwd_server']="" \
+	['port']=""\
 )
 for config_var in ${!config[@]}; do
 	config[${config_var}]=$(grep -Ei "^(${config_var}:)" ${fixed_tmp_files['coleta_info_file']} | cut -d ':' -f 2)
@@ -63,6 +64,9 @@ tmp_arr[${index_tmp_files}]=""
 tmp_name_db=${config['database_local']}
 maior_var=""
 title_message='--> Dados selecionados <--'
+port_ssh=${config['port']:+"-p ${config['port']}"}
+port_scp=${config['port']:+"-P ${config['port']}"}
+unset config['port']
 
 #####################################################################################################################
 # 
@@ -117,14 +121,14 @@ echo  " "
 echo '>>> Exportando estrutura do banco !'
 echo "mysqldump --no-data -h 127.0.0.1 -u ${config['user_db']} -p${config['passwd_db']} ${config['database']} > ${tmp_file}" > ${tmp_file}
 set_sleep_flag true
-if ! error_msg=$(sshpass -p ${config['passwd_server']} scp -o StrictHostKeyChecking=no ${tmp_file} ${config['user_server']}@${connection}:${tmp_file} 2>&1); then
+if ! error_msg=$(sshpass -p ${config['passwd_server']} scp ${port_scp} -o StrictHostKeyChecking=no ${tmp_file} ${config['user_server']}@${connection}:${tmp_file} 2>&1); then
 	cat <<- EOF
 		FATAL ERROR (ip): Não foi possível estabelecer a conexão!"
 		STDERR: ${error_msg}
 		Exitando para outro método... (código de erro 7)!
 	EOF
 	connection=${config['domain']}
-	if ! error_msg=$(sshpass -p ${config['passwd_server']} scp -o StrictHostKeyChecking=no ${tmp_file} ${config['user_server']}@${connection}:${tmp_file} 2>&1); then
+	if ! error_msg=$(sshpass -p ${config['passwd_server']} scp ${port_scp} -o StrictHostKeyChecking=no ${tmp_file} ${config['user_server']}@${connection}:${tmp_file} 2>&1); then
 		cat <<- EOF
 			FATAL ERROR (domain): Não foi possível estabelecer a conexão!"
 			STDERR: ${error_msg}
@@ -137,9 +141,9 @@ if ! error_msg=$(sshpass -p ${config['passwd_server']} scp -o StrictHostKeyCheck
 	fi
 fi
 set_sleep_flag true
-sshpass -p ${config['passwd_server']} ssh ${config['user_server']}@${connection} "chmod +x ${tmp_file}; ${tmp_file}" 2>>${file_log}
+sshpass -p ${config['passwd_server']} ssh ${port_ssh} ${config['user_server']}@${connection} "chmod +x ${tmp_file}; ${tmp_file}" 2>>${file_log}
 set_sleep_flag true
-sshpass -p ${config['passwd_server']} scp ${config['user_server']}@${connection}:${tmp_file} ${tmp_file}
+sshpass -p ${config['passwd_server']} scp ${port_scp} ${config['user_server']}@${connection}:${tmp_file} ${tmp_file}
 set_sleep_flag true
 
 no_tables=$(egrep -i 'create table' ${tmp_file} | egrep -i '(tbstoragelist)|(tbfilaitem)|(log)|.*(50001){1}.*v.*' | sed 's/\/\*!50001 //g' | cut -d ' ' -f '3' | sed 's/`//g' | tr '\n' ' ')
@@ -151,11 +155,11 @@ set_sleep_flag true
 echo '>>> Exportando somente as tabelas que conteram dados !'
 echo "mysqldump ${ignore_tables# } -h 127.0.0.1 -u ${config['user_db']} -p${config['passwd_db']} ${config['database']} > ${tmp_file}" > ${tmp_file}
 set_sleep_flag true
-sshpass -p ${config['passwd_server']} scp ${tmp_file} ${config['user_server']}@${connection}:${tmp_file}
+sshpass -p ${config['passwd_server']} scp ${port_scp} ${tmp_file} ${config['user_server']}@${connection}:${tmp_file}
 set_sleep_flag true
-sshpass -p ${config['passwd_server']} ssh ${config['user_server']}@${connection} "chmod +x ${tmp_file}; ${tmp_file}" 2>>${file_log}
+sshpass -p ${config['passwd_server']} ssh ${port_ssh} ${config['user_server']}@${connection} "chmod +x ${tmp_file}; ${tmp_file}" 2>>${file_log}
 set_sleep_flag true
-sshpass -p ${config['passwd_server']} scp ${config['user_server']}@${connection}:${tmp_file} ${tmp_file}
+sshpass -p ${config['passwd_server']} scp ${port_scp} ${config['user_server']}@${connection}:${tmp_file} ${tmp_file}
 set_sleep_flag true
 
 # exportando somente a estrutura das tabelas que não teram dados
@@ -168,11 +172,11 @@ get_tmp_files ${tmp_file_other}
 echo '>>> Exportando estrutura do banco !'
 echo "mysqldump --no-data -h 127.0.0.1 -u ${config['user_db']} -p${config['passwd_db']} ${config['database']} > ${tmp_file_other}" > ${tmp_file_other}
 set_sleep_flag true
-sshpass -p ${config['passwd_server']} scp ${tmp_file_other} ${config['user_server']}@${connection}:${tmp_file_other}
+sshpass -p ${config['passwd_server']} scp ${port_scp} ${tmp_file_other} ${config['user_server']}@${connection}:${tmp_file_other}
 set_sleep_flag true
-sshpass -p ${config['passwd_server']} ssh ${config['user_server']}@${connection} "chmod +x ${tmp_file_other}; ${tmp_file_other}" 2>>${file_log}
+sshpass -p ${config['passwd_server']} ssh ${port_ssh} ${config['user_server']}@${connection} "chmod +x ${tmp_file_other}; ${tmp_file_other}" 2>>${file_log}
 set_sleep_flag true
-sshpass -p ${config['passwd_server']} scp ${config['user_server']}@${connection}:${tmp_file_other} ${tmp_file_other}
+sshpass -p ${config['passwd_server']} scp ${port_scp} ${config['user_server']}@${connection}:${tmp_file_other} ${tmp_file_other}
 set_sleep_flag true
 
 yes_tables=$(egrep -i 'create table' ${tmp_file_other} | egrep -iv '(tbstoragelist)|(tbfilaitem)|(log)' | sed 's/\/\*!50001 //g' | cut -d ' ' -f '3' | sed 's/`//g' | tr '\n' ' ')
@@ -184,11 +188,11 @@ set_sleep_flag true
 echo '>>> Exportando somente a estrutura das tabelas que não conteram dados !'
 echo "mysqldump --no-data ${ignore_tables# } -h 127.0.0.1 -u ${config['user_db']} -p${config['passwd_db']} ${config['database']} > ${tmp_file_other}" > ${tmp_file_other}
 set_sleep_flag true
-sshpass -p ${config['passwd_server']} scp ${tmp_file_other} ${config['user_server']}@${connection}:${tmp_file_other}
+sshpass -p ${config['passwd_server']} scp ${port_scp} ${tmp_file_other} ${config['user_server']}@${connection}:${tmp_file_other}
 set_sleep_flag true
-sshpass -p ${config['passwd_server']} ssh ${config['user_server']}@${connection} "chmod +x ${tmp_file_other}; ${tmp_file_other}" 2>>${file_log}
+sshpass -p ${config['passwd_server']} ssh ${port_ssh} ${config['user_server']}@${connection} "chmod +x ${tmp_file_other}; ${tmp_file_other}" 2>>${file_log}
 set_sleep_flag true
-sshpass -p ${config['passwd_server']} scp ${config['user_server']}@${connection}:${tmp_file_other} ${tmp_file_other}
+sshpass -p ${config['passwd_server']} scp ${port_scp} ${config['user_server']}@${connection}:${tmp_file_other} ${tmp_file_other}
 set_sleep_flag true
 
 echo "" >> ${tmp_file}
