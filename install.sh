@@ -3,7 +3,7 @@
 cd /tmp
 mydump_install_path='/opt/mydump'
 mydump_desktop="/home/${USER}/.local/share/applications/mydump.desktop"
-sudo apt install ssh openssh-server sshpass terminator multitail git wget -y
+sudo apt install ssh openssh-server sshpass terminator multitail git wget genius -y
 [ -e ${mydump_install_path} ] && {
         sudo rm -rfv ${mydump_install_path}
         sudo rm -fv /usr/local/bin/mydump
