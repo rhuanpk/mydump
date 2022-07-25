@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
 
+get_programs2install() {
+	curl -fsSL https://raw.githubusercontent.com/rhuan-pk/mydump/master/lib/common-properties.lib | grep -Ei '^(programs2install)' | cut -d '=' -f 2 | tr -d "'"
+}
 cd /tmp
 mydump_install_path='/opt/mydump'
 mydump_desktop="/home/${USER}/.local/share/applications/mydump.desktop"
-sudo apt install ${programs2install} -y
+sudo apt install $(get_programs2install) -y
 [ -e ${mydump_install_path} ] && {
         sudo rm -rfv ${mydump_install_path}
         sudo rm -fv /usr/local/bin/mydump
