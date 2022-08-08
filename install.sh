@@ -6,6 +6,7 @@ get_programs2install() {
 cd /tmp
 mydump_install_path='/opt/mydump'
 mydump_desktop="/home/${USER}/.local/share/applications/mydump.desktop"
+sudo apt install curl -y
 sudo apt install $(get_programs2install) -y
 [ -e ${mydump_install_path} ] && {
         sudo rm -rfv ${mydump_install_path}
